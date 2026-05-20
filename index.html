@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grafmakers Agenda</title>
+<style>
+:root{
+  --bg:#f4f2ee;--card:#fff;--border:#ddd8d0;--text:#1a1a18;--muted:#6b6860;
+  --accent:#2d5a27;--al:#e8f0e7;--hbg:#1e3a1a;--se:#f9f8f6;--sh:#eef4ed;
+  --font:'Georgia',serif;--ui:'Segoe UI',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--ui);background:var(--bg);color:var(--text);min-height:100vh}
+
+#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--hbg)}
+.lbox{background:var(--card);border-radius:12px;padding:3rem 3.5rem;max-width:420px;width:90%;text-align:center}
+.lbox .logo{width:56px;height:56px;margin:0 auto 1.3rem;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center}
+.lbox .logo svg{width:28px;height:28px;fill:white}
+.lbox h1{font-family:var(--font);font-size:1.5rem;color:var(--hbg);margin-bottom:.35rem}
+.lbox p{color:var(--muted);font-size:.86rem;margin-bottom:1.6rem}
+.lbox input[type=password]{width:100%;padding:.68rem .9rem;font-size:1.05rem;border:1.5px solid var(--border);border-radius:7px;margin-bottom:.85rem;letter-spacing:.2em;text-align:center;outline:none;transition:border-color .2s}
+.lbox input:focus{border-color:var(--accent)}
+.lbox .lbtn{width:100%;padding:.72rem;background:var(--accent);color:white;border:none;border-radius:7px;font-size:.93rem;font-weight:600;cursor:pointer}
+.lbox .lbtn:hover{background:#1e4019}
+.lerr{color:#c0392b;font-size:.81rem;margin-top:.4rem;display:none}
+
+#app{display:none}
+header{background:var(--hbg);color:white;padding:0 1.3rem;height:50px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;gap:.8rem}
+header h1{font-family:var(--font);font-size:.98rem;font-weight:400;white-space:nowrap}
+.hbtns{display:flex;gap:.35rem;flex-wrap:wrap}
+.hbtn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:white;padding:.26rem .68rem;border-radius:5px;cursor:pointer;font-size:.77rem;white-space:nowrap;transition:background .15s}
+.hbtn:hover,.hbtn.on{background:rgba(255,255,255,.26)}
+.hbtn.gold{background:rgba(255,200,50,.15);border-color:rgba(255,200,50,.4)}
+.hbtn.gold:hover{background:rgba(255,200,50,.28)}
+
+.view{display:none;max-width:1400px;margin:0 auto;padding:1.25rem}
+.view.active{display:block}
+
+/* AGENDA */
+.toolbar{display:flex;align-items:center;gap:.6rem;margin-bottom:.9rem;flex-wrap:wrap}
+.nbtn{background:var(--card);border:1px solid var(--border);border-radius:5px;padding:.35rem .75rem;cursor:pointer;font-size:.82rem}
+.nbtn:hover{background:var(--al)}
+.tbtn2{background:var(--accent);color:white;border:none;border-radius:5px;padding:.35rem .75rem;cursor:pointer;font-size:.8rem;font-weight:600}
+.tbtn2:hover{background:#1e4019}
+.wlbl{font-size:.9rem;font-weight:600;color:var(--hbg);min-width:200px}
+.legend{display:flex;flex-wrap:wrap;gap:.3rem .75rem;margin-bottom:.8rem;align-items:center}
+.li{display:flex;align-items:center;gap:.28rem;font-size:.72rem;color:var(--muted)}
+.ld{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+
+/* WEEK GRID — CSS grid with explicit rows */
+.wgrid{display:grid;grid-template-columns:48px repeat(7,1fr);gap:1px;background:var(--border);border-radius:9px;overflow:hidden;border:1px solid var(--border)}
+.chdr{background:var(--hbg);color:rgba(255,255,255,.9);text-align:center;padding:.45rem .15rem;font-size:.72rem;font-weight:600}
+.chdr .dn{display:block;font-size:.58rem;opacity:.68;font-weight:400}
+.chdr .dd{display:block;font-size:.88rem;font-weight:700;margin-top:1px}
+.chdr.today{background:var(--accent)}
+
+/* Each 30-min row is ROW_H px tall */
+.tlbl{background:var(--card);color:var(--muted);text-align:right;padding:.2rem .35rem 0;font-size:.62rem;border-right:1px solid var(--border);line-height:1.2;white-space:nowrap;height:28px}
+.tlbl.dim{color:#d0ccc5;font-size:.58rem}
+
+/* Day column cell for a 30-min row — just a container */
+.dcell{background:white;position:relative;height:28px;display:grid;grid-template-columns:1fr 1fr;gap:1px}
+.dcell.one{grid-template-columns:1fr}
+.dcell.off{background:#edebe6;display:block;height:28px}
+.dcell.blkd{background:#e2ddd6;display:block;height:28px}
+.blkd-lbl{font-size:.56rem;color:#a09888;padding:.1rem .28rem;font-style:italic;white-space:nowrap;overflow:hidden}
+
+/* Lane within a dcell — just a background placeholder normally */
+.ln{background:transparent;position:relative;min-height:100%;cursor:pointer;border:1px dashed transparent;border-radius:2px;transition:background .1s,border-color .1s}
+.ln:hover:not(.lnoclick){background:var(--sh);border-color:#bbb}
+.ln.lnoclick{cursor:default}
+/* G label in empty bookable slot */
+.glbl{position:absolute;bottom:1px;right:2px;font-size:.5rem;color:#ccc;font-weight:700;pointer-events:none;user-select:none}
+
+/* BOOKING BLOCK — absolutely positioned spanning multiple rows */
+.bblock{position:absolute;border-radius:4px;z-index:10;cursor:pointer;overflow:hidden;display:flex;flex-direction:column;padding:2px 4px;font-size:.66rem;line-height:1.25;transition:opacity .15s;box-sizing:border-box}
+.bblock:hover{opacity:.85}
+.bblock.dragging{opacity:.5}
+.bblock .bct{font-size:.56rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;opacity:.72}
+.bblock .bcn{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bblock .bcs{font-size:.58rem;opacity:.68;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bblock .btm{font-size:.6rem;font-weight:700;margin-top:auto;opacity:.75;white-space:nowrap}
+
+/* drop highlight on lane */
+.ln.drop-ok{background:#d4e8d2!important;border:2px dashed var(--accent)!important}
+
+/* drag ghost */
+.dgh{position:fixed;pointer-events:none;z-index:9999;opacity:.86;border-radius:5px;padding:3px 8px;font-size:.75rem;font-weight:600;white-space:nowrap;box-shadow:0 3px 12px rgba(0,0,0,.2);transform:translate(-50%,-50%);display:none;border-left:4px solid #666}
+
+/* MODAL */
+.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.52);z-index:1000;align-items:flex-start;justify-content:center;padding:1.5rem 1rem;overflow-y:auto}
+.mo.open{display:flex}
+.modal{background:var(--card);border-radius:12px;max-width:500px;width:100%;padding:1.6rem;margin:auto}
+.mhdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:.9rem;padding-bottom:.62rem;border-bottom:1px solid var(--border)}
+.mhdr h2{font-family:var(--font);font-size:1.08rem;color:var(--hbg)}
+.mclose{background:none;border:none;font-size:1.25rem;cursor:pointer;color:var(--muted);line-height:1}
+.mclose:hover{color:var(--text)}
+.minfo{background:var(--al);border-radius:6px;padding:.45rem .78rem;font-size:.8rem;color:#1e4019;margin-bottom:.9rem;font-weight:500}
+.fg{margin-bottom:.78rem}
+.fg>label{display:block;font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.28rem}
+.fg input[type=text],.fg textarea{width:100%;padding:.48rem .62rem;border:1.5px solid var(--border);border-radius:6px;font-size:.87rem;outline:none;font-family:var(--ui);background:var(--se);transition:border-color .15s}
+.fg input:focus,.fg textarea:focus{border-color:var(--accent);background:white}
+.fg textarea{resize:vertical;min-height:52px}
+.fg-grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:.35rem}
+.fg-grid2{display:grid;grid-template-columns:1fr 1fr;gap:.35rem}
+.fgbtn{padding:.48rem .25rem;border:2px solid var(--border);border-radius:6px;background:var(--se);cursor:pointer;font-size:.72rem;font-weight:600;text-align:center;transition:all .12s}
+.fgbtn:hover{border-color:#aaa}
+.fgbtn.sel{border-width:2.5px}
+.ckrow{display:flex;gap:.9rem;flex-wrap:wrap}
+.cki{display:flex;align-items:center;gap:.28rem;font-size:.83rem;cursor:pointer}
+.cki input{accent-color:var(--accent);cursor:pointer}
+.ferr{color:#c0392b;font-size:.72rem;margin-top:.22rem;display:none}
+.mact{display:flex;gap:.52rem;margin-top:.95rem;padding-top:.8rem;border-top:1px solid var(--border)}
+.bsave{flex:1;padding:.62rem;background:var(--accent);color:white;border:none;border-radius:6px;font-size:.86rem;font-weight:700;cursor:pointer}
+.bsave:hover{background:#1e4019}
+.bcancel{padding:.62rem .95rem;background:var(--se);border:1px solid var(--border);border-radius:6px;font-size:.86rem;cursor:pointer}
+.bcancel:hover{background:#eee}
+.bdel{padding:.62rem .78rem;background:#fbeaea;border:1px solid #e8a8a8;border-radius:6px;font-size:.82rem;color:#c0392b;cursor:pointer;font-weight:600}
+.bdel:hover{background:#f7d4d4}
+
+/* emoji picker */
+.emoji-picker{display:none;border:1px solid var(--border);border-radius:7px;background:var(--card);padding:.5rem;max-height:160px;overflow-y:auto;flex-wrap:wrap;gap:.2rem;margin-top:.3rem}
+.emoji-picker.open{display:flex}
+.epick{background:none;border:none;font-size:1.2rem;cursor:pointer;padding:.15rem;border-radius:4px;line-height:1.2}
+.epick:hover{background:#eee}
+
+/* BEHEER */
+.atabs{display:flex;gap:.22rem;border-bottom:2px solid var(--border);margin-bottom:1.2rem;flex-wrap:wrap}
+.atab{background:none;border:none;padding:.48rem .9rem;cursor:pointer;font-size:.81rem;color:var(--muted);border-bottom:2.5px solid transparent;margin-bottom:-2px;font-family:var(--ui);white-space:nowrap}
+.atab:hover{color:var(--text)}
+.atab.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.apanel{display:none}
+.apanel.on{display:block}
+.acard{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:1.05rem 1.3rem;margin-bottom:.85rem}
+.acard h3{font-size:.86rem;font-weight:700;color:var(--hbg);margin-bottom:.75rem}
+.arow{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:.55rem}
+.arow label{font-size:.78rem;color:var(--muted)}
+.ain{padding:.28rem .5rem;border:1px solid var(--border);border-radius:5px;font-size:.84rem;background:white;font-family:var(--ui)}
+.sbtn{background:var(--accent);color:white;border:none;border-radius:5px;padding:.35rem .88rem;cursor:pointer;font-size:.81rem;font-weight:600}
+.sbtn:hover{background:#1e4019}
+.secbtn{background:var(--al);color:var(--accent);border:1px solid #a8c9a5;border-radius:5px;padding:.32rem .75rem;cursor:pointer;font-size:.78rem;font-weight:600}
+.secbtn:hover{background:#d4e8d2}
+.dngbtn{background:#fbeaea;color:#c0392b;border:1px solid #e8a8a8;border-radius:5px;padding:.32rem .75rem;cursor:pointer;font-size:.78rem;font-weight:600}
+.dngbtn:hover{background:#f7d4d4}
+.tbl{width:100%;border-collapse:collapse;font-size:.79rem}
+.tbl th{text-align:left;padding:.35rem .52rem;border-bottom:1.5px solid var(--border);color:var(--muted);font-weight:600;font-size:.7rem;text-transform:uppercase;letter-spacing:.04em}
+.tbl td{padding:.35rem .52rem;border-bottom:1px solid var(--border);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:#fafaf8}
+.xbtn{background:none;border:none;color:#c0392b;cursor:pointer;font-size:.86rem;padding:.08rem .22rem}
+.xbtn:hover{opacity:.7}
+.badge{display:inline-block;padding:.1rem .42rem;border-radius:4px;font-size:.66rem;font-weight:700}
+.badge-admin{background:#fff3cd;color:#856404}
+.badge-user{background:var(--al);color:var(--accent)}
+.badge-viewer{background:#e8f4fd;color:#1a5a8a}
+.pmtbl{width:100%;border-collapse:collapse;font-size:.78rem}
+.pmtbl th{padding:.35rem .52rem;border-bottom:1.5px solid var(--border);font-size:.7rem;font-weight:600;color:var(--muted);text-transform:uppercase}
+.pmtbl th:not(:first-child){text-align:center;min-width:72px}
+.pmtbl td{padding:.32rem .52rem;border-bottom:1px solid var(--border)}
+.pmtbl td:not(:first-child){text-align:center}
+.pmtbl .psec{background:#f5f3ef;font-weight:700;color:var(--hbg);font-size:.72rem}
+.pmtbl input[type=checkbox]{accent-color:var(--accent);cursor:pointer}
+.titem{display:flex;align-items:center;gap:.5rem;padding:.35rem .45rem;border:1px solid var(--border);border-radius:6px;margin-bottom:.35rem;background:white}
+.titem input[type=text]{border:none;border-bottom:1px solid var(--border);border-radius:0;background:transparent;font-size:.83rem;padding:.16rem .25rem;flex:1;outline:none;font-family:var(--ui)}
+.titem input[type=text]:focus{border-bottom-color:var(--accent)}
+input[type=color]{border:none;padding:0;width:24px;height:24px;border-radius:4px;cursor:pointer;background:none}
+
+/* LOG */
+.log-fbar{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.7rem}
+.log-fbar label{font-size:.78rem;color:var(--muted)}
+.log-wrap{background:var(--card);border:1px solid var(--border);border-radius:9px;overflow:hidden;max-height:460px;overflow-y:auto}
+.lentry{display:flex;align-items:flex-start;gap:.55rem;padding:.45rem .65rem;border-bottom:1px solid var(--border);font-size:.77rem}
+.lentry:last-child{border-bottom:none}
+.lentry.lnew{background:#f0f8ee}
+.lentry.lflag{background:#fffbec;border-left:3px solid #e8a838}
+.ltime{color:var(--muted);font-size:.68rem;min-width:105px;flex-shrink:0;line-height:1.4}
+.luser{font-weight:600;color:var(--hbg);min-width:82px;flex-shrink:0}
+.lmsg{flex:1}
+.ltag{display:inline-block;padding:.07rem .32rem;border-radius:3px;font-size:.63rem;font-weight:700;text-transform:uppercase;margin-right:.3rem}
+.ltag-create{background:#d4e8d2;color:#1e4019}
+.ltag-edit{background:#dceefa;color:#1a4a7a}
+.ltag-delete{background:#fbeaea;color:#8a1a1a}
+.ltag-move{background:#f5edda;color:#5a3e00}
+.ltag-system{background:#eee;color:#555}
+.flagbtn{background:none;border:none;cursor:pointer;font-size:.92rem;flex-shrink:0;opacity:.28;transition:opacity .12s}
+.flagbtn:hover,.flagbtn.on{opacity:1}
+.etag{display:inline-flex;align-items:center;gap:.26rem;background:#e8f0e7;border:1px solid #a8c9a5;border-radius:11px;padding:.16rem .48rem;font-size:.73rem;margin:.16rem}
+.etag button{background:none;border:none;cursor:pointer;color:#2d5a27;font-size:.72rem;line-height:1}
+
+/* STAT */
+.pbar{display:flex;align-items:center;gap:.48rem;flex-wrap:wrap;background:var(--card);padding:.65rem .95rem;border:1px solid var(--border);border-radius:8px;margin-bottom:1rem}
+.pbar label{font-size:.78rem;color:var(--muted)}
+.pbar select,.pbar input[type=date]{padding:.26rem .48rem;border:1px solid var(--border);border-radius:5px;font-size:.81rem;background:white}
+.pbtn{background:var(--accent);color:white;border:none;border-radius:5px;padding:.32rem .75rem;cursor:pointer;font-size:.78rem;font-weight:600}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:.75rem;margin-bottom:1rem}
+.scard{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:.82rem .95rem;text-align:center}
+.scard .sn{font-size:1.6rem;font-weight:700;color:var(--hbg);line-height:1}
+.scard .sl{font-size:.7rem;color:var(--muted);margin-top:.2rem}
+.crow{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.75rem}
+.cbox{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:.95rem}
+.cbox h4{font-size:.78rem;font-weight:700;color:var(--hbg);margin-bottom:.72rem}
+.brow{display:flex;align-items:center;gap:.48rem;margin-bottom:.38rem;font-size:.76rem}
+.blbl{min-width:88px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btrk{flex:1;background:#eee;border-radius:3px;height:11px;overflow:hidden}
+.bfil{height:100%;border-radius:3px;transition:width .35s}
+.bval{min-width:22px;text-align:right;font-weight:600}
+
+/* PDF */
+.pdfctl{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:.95rem 1.25rem;margin-bottom:1rem;display:flex;align-items:center;gap:.75rem;flex-wrap:wrap}
+.pdfctl label{font-size:.79rem;color:var(--muted)}
+.pdfctl input[type=date]{padding:.28rem .5rem;border:1px solid var(--border);border-radius:5px;font-size:.83rem}
+.ptbl{width:100%;border-collapse:collapse;font-size:.77rem}
+.ptbl th{background:var(--hbg);color:white;padding:.32rem .45rem;text-align:left;font-size:.68rem}
+.ptbl td{padding:.28rem .45rem;border-bottom:1px solid #e0ddd8;vertical-align:top}
+.ptbl tr:nth-child(even) td{background:#f9f8f6}
+@media print{
+  header,.hbtns,.pdfctl,.atabs,.view:not(#view-admin){display:none!important}
+  #view-admin{display:block!important;padding:0;max-width:none}
+  #ap-pdf{display:block!important}
+  .apanel:not(#ap-pdf){display:none!important}
+}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="lbox">
+    <div class="logo"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/></svg></div>
+    <h1>Grafmakers Agenda</h1>
+    <p>Gemeente — Boekingssysteem begrafenisondernemers</p>
+    <input type="password" id="pw-input" placeholder="Wachtwoord">
+    <button class="lbtn" onclick="tryLogin()">Aanmelden</button>
+    <div class="lerr" id="lerr">Ongeldig wachtwoord.</div>
+  </div>
+</div>
+
+<div id="app">
+  <header>
+    <h1>⚰ Grafmakers Agenda</h1>
+    <div class="hbtns" id="nav-btns"></div>
+  </header>
+
+  <div class="view active" id="view-agenda">
+    <div class="legend" id="legend"></div>
+    <div class="toolbar">
+      <button class="nbtn" onclick="changeWeek(-1)">&#8592; Vorige week</button>
+      <button class="tbtn2" onclick="goToday()">Vandaag</button>
+      <button class="nbtn" onclick="changeWeek(1)">Volgende week &#8594;</button>
+      <span class="wlbl" id="wlbl"></span>
+    </div>
+    <div style="position:relative">
+      <div class="wgrid" id="wgrid" style="--rh:20px"></div>
+      <!-- booking blocks rendered here by JS -->
+      <div id="bblocks"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-admin">
+    <h2 style="font-family:var(--font);font-size:1.18rem;color:var(--hbg);margin-bottom:1rem">Beheer</h2>
+    <div class="atabs" id="atabs"></div>
+
+    <div class="apanel" id="ap-tijden">
+      <div class="acard">
+        <h3>Werkuren per dag</h3>
+        <div id="day-ed"></div>
+        <div class="arow" style="margin-top:.75rem">
+          <label>Weergaveraster:</label>
+          <select id="adm-grid" class="ain"><option value="15">15 min</option><option value="30" selected>30 min</option><option value="60">60 min</option></select>
+          <label style="margin-left:.3rem">Boekingsduur (min):</label>
+          <input type="number" id="adm-bdur" value="90" min="30" max="240" step="15" class="ain" style="width:65px">
+          <span id="bdur-hint" style="font-size:.76rem;color:var(--muted)"></span>
+        </div>
+        <button class="sbtn" onclick="saveSchedule()">✓ Opslaan</button>
+      </div>
+    </div>
+
+    <div class="apanel" id="ap-blokkeer">
+      <div class="acard">
+        <h3>Dag of periode blokkeren</h3>
+        <div class="arow">
+          <label>Van:</label><input type="date" id="blk-f" class="ain">
+          <label>Tot:</label><input type="date" id="blk-t" class="ain">
+          <label>Reden:</label><input type="text" id="blk-r" class="ain" placeholder="bv. Feestdag" style="width:170px">
+          <button class="sbtn" onclick="addBlock()">+ Blokkeer</button>
+        </div>
+        <table class="tbl"><thead><tr><th>Van</th><th>Tot</th><th>Reden</th><th></th></tr></thead>
+        <tbody id="blk-tbody"></tbody></table>
+      </div>
+    </div>
+
+    <div class="apanel" id="ap-types">
+      <div class="acard">
+        <h3>Soorten begravingen</h3>
+        <p style="font-size:.79rem;color:var(--muted);margin-bottom:.75rem">Klik de kleurvlak om de kleur te wijzigen. Vinkje = zichtbaar.</p>
+        <div id="type-list"></div>
+        <div class="arow" style="margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--border)">
+          <input type="text" id="nt-lbl" class="ain" placeholder="Naam nieuwe soort" style="width:145px">
+          <div style="position:relative">
+            <input type="text" id="nt-ico" class="ain" placeholder="Emoji" style="width:58px;text-align:center" onmousedown="openEmojiPicker('type')" readonly>
+            <div class="emoji-picker" id="emoji-picker-type"></div>
+          </div>
+          <input type="color" id="nt-col" value="#888888" title="Kleur kiezen">
+          <button class="sbtn" onclick="addType()">+ Toevoegen</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="apanel" id="ap-users">
+      <div class="acard">
+        <h3>Gebruikers</h3>
+        <p style="font-size:.79rem;color:var(--muted);margin-bottom:.75rem">Elke gebruiker logt in met zijn uniek wachtwoord. Wachtwoord = identiteit.</p>
+        <div class="arow">
+          <label>Naam:</label><input type="text" id="nu-n" class="ain" placeholder="bv. Begrafenis Janssen" style="width:185px">
+          <label>Wachtwoord:</label><input type="password" id="nu-p" class="ain" placeholder="Kies wachtwoord" style="width:140px">
+          <label>Rol:</label>
+          <select id="nu-r" class="ain">
+            <option value="viewer">Enkel bekijken</option>
+            <option value="user" selected>Boeken</option>
+            <option value="admin">Beheerder</option>
+          </select>
+          <button class="sbtn" onclick="addUser()">+ Toevoegen</button>
+        </div>
+        <table class="tbl" style="margin-top:.65rem">
+          <thead><tr><th>Naam</th><th>Rol</th><th>Rechten</th><th>Aangemaakt</th><th></th></tr></thead>
+          <tbody id="usr-tbody"></tbody>
+        </table>
+      </div>
+      <div class="acard">
+        <h3>Standaard rechten per rol</h3>
+        <p style="font-size:.79rem;color:var(--muted);margin-bottom:.72rem">Pas standaardrechten per rol aan. Per gebruiker ook individuele uitzonderingen via "Rechten".</p>
+        <table class="pmtbl"><thead><tr><th>Actie</th><th>Bekijken</th><th>Boeken</th><th>Beheerder</th></tr></thead>
+        <tbody id="pm-tbody"></tbody></table>
+        <button class="sbtn" style="margin-top:.65rem" onclick="saveRolePerms()">✓ Rolrechten opslaan</button>
+      </div>
+    </div>
+
+    <div class="apanel" id="ap-log">
+      <div class="acard" style="padding-bottom:.5rem">
+        <h3>Activiteitenlog</h3>
+        <div class="log-fbar">
+          <label>Actie:</label>
+          <select id="lf-type" class="ain" onchange="renderLog()">
+            <option value="">Alle</option><option value="create">Aangemaakt</option><option value="edit">Bewerkt</option>
+            <option value="delete">Verwijderd</option><option value="move">Verplaatst</option><option value="system">Systeem</option>
+          </select>
+          <label>Gebruiker:</label>
+          <select id="lf-user" class="ain" onchange="renderLog()"><option value="">Iedereen</option></select>
+          <label>Van:</label><input type="date" id="lf-from" class="ain" onchange="renderLog()">
+          <label>Tot:</label><input type="date" id="lf-to" class="ain" onchange="renderLog()">
+          <label class="cki"><input type="checkbox" id="lf-flag" onchange="renderLog()" style="accent-color:var(--accent)"> Alleen gemarkeerd</label>
+          <button class="dngbtn" style="margin-left:auto" onclick="clearLog()">Log wissen</button>
+        </div>
+        <div class="log-wrap" id="log-wrap"></div>
+      </div>
+      <div class="acard">
+        <h3>E-mailmeldingen</h3>
+        <p style="font-size:.79rem;color:var(--muted);margin-bottom:.62rem">Bij nieuwe boekingen worden deze adressen op de hoogte gesteld.</p>
+        <div class="arow">
+          <input type="email" id="ne-em" class="ain" placeholder="email@gemeente.be" style="width:230px">
+          <button class="sbtn" onclick="addEmail()">+ Toevoegen</button>
+        </div>
+        <div id="email-tags" style="margin-top:.42rem"></div>
+      </div>
+    </div>
+
+    <div class="apanel" id="ap-stats">
+      <div class="pbar">
+        <label>Periode:</label>
+        <select id="sp" class="ain" onchange="onPChange()">
+          <option value="week">Deze week</option><option value="month">Deze maand</option>
+          <option value="year">Dit jaar</option><option value="5year">Laatste 5 jaar</option>
+          <option value="all" selected>Altijd</option><option value="custom">Aangepaste periode</option>
+        </select>
+        <span id="sp-custom" style="display:none;gap:.42rem;align-items:center">
+          <label>Van:</label><input type="date" id="sp-f" class="ain">
+          <label>Tot:</label><input type="date" id="sp-t" class="ain">
+        </span>
+        <button class="pbtn" onclick="renderStats()">Tonen</button>
+      </div>
+      <div class="sgrid" id="stat-cards"></div>
+      <div class="crow">
+        <div class="cbox"><h4>Per soort begraving</h4><div id="ch-type"></div></div>
+        <div class="cbox"><h4>Per dag van de week</h4><div id="ch-day"></div></div>
+      </div>
+      <div class="crow">
+        <div class="cbox"><h4>Per grafmaker</h4><div id="ch-gm"></div></div>
+        <div class="cbox"><h4>Top ondernemers</h4><div id="ch-ond"></div></div>
+      </div>
+    </div>
+
+    <div class="apanel" id="ap-pdf">
+      <div class="pdfctl">
+        <label>Van:</label><input type="date" id="pdf-f">
+        <label>Tot:</label><input type="date" id="pdf-t">
+        <button class="sbtn" onclick="genPdf()">Overzicht genereren</button>
+        <button class="secbtn" onclick="window.print()">🖨 Afdrukken / PDF</button>
+      </div>
+      <div id="pdf-area"></div>
+    </div>
+  </div>
+</div>
+
+<!-- BOOKING MODAL -->
+<div class="mo" id="mo">
+  <div class="modal">
+    <div class="mhdr"><h2 id="m-title">Tijdslot boeken</h2><button class="mclose" onclick="closeModal()">&#10005;</button></div>
+    <div class="minfo" id="m-info"></div>
+    <div class="fg" id="gm-grp">
+      <label>Grafmaker *</label>
+      <div class="fg-grid2" id="gm-btns"></div>
+      <div class="ferr" id="err-gm">Kies een grafmaker.</div>
+    </div>
+    <div class="fg">
+      <label>Soort begraving *</label>
+      <div class="fg-grid3" id="type-btns"></div>
+      <div class="ferr" id="err-type">Kies een soort.</div>
+    </div>
+    <div class="fg">
+      <label>Naam overledene *</label>
+      <input type="text" id="f-naam" placeholder="Voornaam Achternaam">
+      <div class="ferr" id="err-naam">Vul de naam in.</div>
+    </div>
+    <div class="fg">
+      <label>Begrafenisondernemer *</label>
+      <input type="text" id="f-ond" placeholder="Naam onderneming">
+      <div class="ferr" id="err-ond">Vul de ondernemer in.</div>
+    </div>
+    <div class="fg">
+      <label>Extra opties</label>
+      <div class="ckrow">
+        <label class="cki"><input type="checkbox" id="f-bij"> Bijzetting</label>
+        <label class="cki"><input type="checkbox" id="f-dnt"> Dienst ervoor</label>
+      </div>
+    </div>
+    <div class="fg"><label>Opmerkingen</label><textarea id="f-opm" placeholder="Eventuele bijzonderheden..."></textarea></div>
+    <div class="mact">
+      <button class="bcancel" onclick="closeModal()">Annuleren</button>
+      <button class="bdel" id="btn-del" style="display:none" onclick="deleteBooking()">Verwijderen</button>
+      <button class="bsave" id="btn-save" onclick="saveBooking()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- PERM MODAL -->
+<div class="mo" id="mo-p">
+  <div class="modal" style="max-width:420px">
+    <div class="mhdr"><h2 id="pm-title">Rechten aanpassen</h2><button class="mclose" onclick="closePM()">&#10005;</button></div>
+    <div id="pm-body"></div>
+    <div class="mact">
+      <button class="bcancel" onclick="closePM()">Annuleren</button>
+      <button class="bsave" onclick="saveUserPerms()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<div class="dgh" id="dgh"></div>
+
+<script>
+// ══════════════════════════════════════
+// DATA
+// ══════════════════════════════════════
+const S=k=>{try{return JSON.parse(localStorage.getItem(k)||'null')}catch{return null}};
+const W=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const getBK=()=>S('g6_bk')||{};
+const saveBK=b=>W('g6_bk',b);
+const getBlk=()=>S('g6_blk')||[];
+const saveBlk=b=>W('g6_blk',b);
+const getLog=()=>S('g6_log')||[];
+const saveLog=l=>W('g6_log',l.slice(-2000));
+const getEmails=()=>S('g6_em')||[];
+const saveEmails=e=>W('g6_em',e);
+function getSch(){return S('g6_sch')||{gridMin:30,bookDur:90,days:{1:{start:'09:00',end:'15:00',cap:2},2:{start:'09:00',end:'15:00',cap:2},3:{start:'09:00',end:'15:00',cap:2},4:{start:'09:00',end:'15:00',cap:2},5:{start:'09:00',end:'15:00',cap:2,splitAt:'12:00',splitCap:1},6:{start:'09:00',end:'15:00',cap:1},0:{start:'00:00',end:'00:00',cap:0}}};}
+const saveSch=s=>W('g6_sch',s);
+function getUsers(){return S('g6_usr')||[{id:'admin',name:'Beheerder',pass:'9230',role:'admin',created:new Date().toISOString()}];}
+const saveUsers=u=>W('g6_usr',u);
+function getTypes(){return S('g6_typ')||[{id:'as',label:'Asverstrooiing',icon:'🌿',color:'#e8a838',on:true},{id:'col',label:'Columbarium',icon:'🏛',color:'#7b5ea7',on:true},{id:'urn',label:'Urnenveld',icon:'⚱',color:'#3a7abf',on:true},{id:'kel',label:'Kelder',icon:'🔑',color:'#c0392b',on:true},{id:'uke',label:'Urnenkelder',icon:'🏺',color:'#2a9d6e',on:true},{id:'grf',label:'Grondgraf',icon:'⛏',color:'#8b6914',on:true}];}
+const saveTypes=t=>W('g6_typ',t);
+function getPerms(){return S('g6_prm')||{viewer:{view_agenda:true,view_detail:false,create:false,edit:false,del:false,move:false,admin:false},user:{view_agenda:true,view_detail:true,create:true,edit:true,del:false,move:true,admin:false},admin:{view_agenda:true,view_detail:true,create:true,edit:true,del:true,move:true,admin:true}};}
+const savePerms=p=>W('g6_prm',p);
+
+// ══════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════
+const DN=['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'];
+const MN=['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+const pz=n=>String(n).padStart(2,'0');
+const m2t=m=>pz(Math.floor(m/60))+':'+pz(m%60);
+const t2m=t=>{if(!t)return 0;const[h,x]=t.split(':').map(Number);return h*60+x};
+const fmtD=d=>d.toISOString().slice(0,10);
+const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const lighten=(c,a=.13)=>{const r=parseInt(c.slice(1,3),16),g=parseInt(c.slice(3,5),16),b=parseInt(c.slice(5,7),16);return`rgba(${r},${g},${b},${a})`};
+const typeById=id=>getTypes().find(t=>t.id===id)||{label:id,icon:'?',color:'#aaa',id};
+
+function weekDays(off){
+  const now=new Date();const diff=now.getDay()===0?-6:1-now.getDay();
+  const mon=new Date(now);mon.setDate(now.getDate()+diff+off*7);
+  return Array.from({length:7},(_,i)=>{const d=new Date(mon);d.setDate(mon.getDate()+i);return d});
+}
+function weekNum(d){
+  const dt=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+  dt.setUTCDate(dt.getUTCDate()+4-(dt.getUTCDay()||7));
+  return Math.ceil((((dt-new Date(Date.UTC(dt.getUTCFullYear(),0,1)))/86400000)+1)/7);
+}
+const isBlocked=ds=>getBlk().some(b=>ds>=b.from&&ds<=b.to);
+const blockReason=ds=>{const b=getBlk().find(b=>ds>=b.from&&ds<=b.to);return b?b.reason||'Geblokkeerd':'';};
+
+// ══════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════
+let CU=null;
+function can(act){
+  if(!CU)return false;
+  if(CU.customPerms)return !!CU.customPerms[act];
+  return !!(getPerms()[CU.role]||{})[act];
+}
+function tryLogin(){
+  const v=document.getElementById('pw-input').value.trim();
+  const u=getUsers().find(u=>u.pass===v);
+  if(u){CU=u;document.getElementById('login-screen').style.display='none';document.getElementById('app').style.display='block';addLog('system',`${u.name} heeft ingelogd`);buildNav();showView('agenda');}
+  else document.getElementById('lerr').style.display='block';
+}
+document.getElementById('pw-input').addEventListener('keydown',e=>{if(e.key==='Enter')tryLogin()});
+function logout(){addLog('system',`${CU?.name} heeft uitgelogd`);CU=null;document.getElementById('app').style.display='none';document.getElementById('login-screen').style.display='flex';document.getElementById('pw-input').value='';document.getElementById('lerr').style.display='none';}
+
+function buildNav(){
+  const nb=document.getElementById('nav-btns');nb.innerHTML='';
+  const b=(l,cb,cls)=>{const el=document.createElement('button');el.className='hbtn '+(cls||'');el.textContent=l;el.onclick=cb;nb.appendChild(el);return el;};
+  const a=b('📅 Agenda',()=>showView('agenda'));a.id='nav-agenda';
+  if(can('admin')){const x=b('⚙ Beheer',()=>showView('admin'),'gold');x.id='nav-admin';}
+  b('Afmelden',logout);
+}
+function showView(v){
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  document.querySelectorAll('#nav-btns .hbtn[id]').forEach(b=>b.classList.toggle('on',b.id==='nav-'+v));
+  if(v==='agenda')renderGrid();
+  if(v==='admin')buildAdminTabs();
+}
+
+// ══════════════════════════════════════
+// ADMIN TABS
+// ══════════════════════════════════════
+const TABS=[{id:'tijden',lbl:'⏱ Tijden'},{id:'blokkeer',lbl:'🚫 Blokkeer'},{id:'types',lbl:'🏷 Soorten'},{id:'users',lbl:'👥 Gebruikers'},{id:'log',lbl:'📋 Log'},{id:'stats',lbl:'📊 Statistieken'},{id:'pdf',lbl:'🖨 Afdrukken'}];
+function buildAdminTabs(){
+  const bar=document.getElementById('atabs');bar.innerHTML='';
+  TABS.forEach(t=>{const b=document.createElement('button');b.className='atab';b.textContent=t.lbl;b.dataset.tab=t.id;b.onclick=()=>openTab(t.id);bar.appendChild(b);});
+  openTab('tijden');
+}
+function openTab(id){
+  document.querySelectorAll('.atab').forEach(b=>b.classList.toggle('on',b.dataset.tab===id));
+  document.querySelectorAll('.apanel').forEach(p=>p.classList.remove('on'));
+  const p=document.getElementById('ap-'+id);if(p)p.classList.add('on');
+  if(id==='tijden')renderDayEd();
+  if(id==='blokkeer')renderBlkList();
+  if(id==='types')renderTypeList();
+  if(id==='users'){renderUsers();renderPermTable();}
+  if(id==='log'){buildLogUserFilter();renderLog();renderEmailTags();}
+  if(id==='stats')renderStats();
+  if(id==='pdf')initPdf();
+}
+
+// ══════════════════════════════════════
+// LOG
+// ══════════════════════════════════════
+function addLog(type,msg){
+  const log=getLog();
+  log.push({id:'l'+Date.now()+'_'+Math.random().toString(36).slice(2,5),ts:new Date().toISOString(),type,user:CU?CU.name:'?',msg,flagged:false,isNew:true});
+  saveLog(log);
+  if(['create','edit','delete','move'].includes(type)){const em=getEmails();if(em.length)console.log('[EMAIL]',em.join(', '),'|',msg);}
+}
+function buildLogUserFilter(){
+  const sel=document.getElementById('lf-user');
+  if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">Iedereen</option>';
+  // include both log users AND registered users
+  const logUsers=[...new Set(getLog().map(l=>l.user))];
+  const regUsers=getUsers().map(u=>u.name);
+  const allUsers=[...new Set([...logUsers,...regUsers])].sort();
+  allUsers.forEach(u=>{const o=document.createElement('option');o.value=u;o.textContent=u;sel.appendChild(o);});
+  if(cur)sel.value=cur;
+}
+function renderLog(){
+  const log=getLog().slice().reverse();
+  const ft=document.getElementById('lf-type').value;
+  const fu=document.getElementById('lf-user').value;
+  const ffrom=document.getElementById('lf-from').value;
+  const fto=document.getElementById('lf-to').value;
+  const ff=document.getElementById('lf-flag').checked;
+  const f=log.filter(l=>{
+    if(ft&&l.type!==ft)return false;
+    if(fu&&l.user!==fu)return false;
+    if(ffrom&&l.ts.slice(0,10)<ffrom)return false;
+    if(fto&&l.ts.slice(0,10)>fto)return false;
+    if(ff&&!l.flagged)return false;
+    return true;
+  });
+  const w=document.getElementById('log-wrap');
+  if(!f.length){w.innerHTML='<div style="padding:.85rem;color:var(--muted);font-size:.78rem">Geen logregels.</div>';return;}
+  w.innerHTML='';
+  f.forEach(l=>{
+    const row=document.createElement('div');
+    row.className='lentry'+(l.isNew?' lnew':'')+(l.flagged?' lflag':'');
+    const dt=new Date(l.ts);
+    const dts=`${pz(dt.getDate())}/${pz(dt.getMonth()+1)}/${dt.getFullYear()} ${pz(dt.getHours())}:${pz(dt.getMinutes())}`;
+    row.innerHTML=`<div class="ltime">${dts}</div><div class="luser">${esc(l.user)}</div><div class="lmsg"><span class="ltag ltag-${l.type}">${l.type}</span>${esc(l.msg)}</div><button class="flagbtn${l.flagged?' on':''}" onclick="toggleFlag('${l.id}')" title="Markeer">🚩</button>`;
+    w.appendChild(row);
+  });
+  const allLog=getLog();f.forEach(fl=>{const al=allLog.find(x=>x.id===fl.id);if(al)al.isNew=false;});saveLog(allLog);
+}
+function toggleFlag(id){const log=getLog();const l=log.find(l=>l.id===id);if(l)l.flagged=!l.flagged;saveLog(log);renderLog();}
+function clearLog(){if(!confirm('Log wissen?'))return;saveLog([]);renderLog();}
+function renderEmailTags(){
+  const em=getEmails();const c=document.getElementById('email-tags');c.innerHTML='';
+  em.forEach((e,i)=>{const tag=document.createElement('span');tag.className='etag';tag.innerHTML=`${esc(e)}<button onclick="delEmail(${i})">✕</button>`;c.appendChild(tag);});
+}
+function addEmail(){const v=document.getElementById('ne-em').value.trim();if(!v||!v.includes('@')){alert('Ongeldig e-mailadres.');return;}const em=getEmails();if(em.includes(v)){alert('Al aanwezig.');return;}em.push(v);saveEmails(em);renderEmailTags();document.getElementById('ne-em').value='';}
+function delEmail(i){const em=getEmails();em.splice(i,1);saveEmails(em);renderEmailTags();}
+
+// ══════════════════════════════════════
+// CAPACITY
+// ══════════════════════════════════════
+function capAt(dow,startMin){
+  const sch=getSch();const dc=sch.days[dow];
+  if(!dc||!dc.cap)return 0;
+  const ds=t2m(dc.start),de=t2m(dc.end);
+  if(startMin<ds||startMin+sch.bookDur>de)return 0;
+  if(dow===5&&dc.splitAt&&startMin>=t2m(dc.splitAt))return dc.splitCap||1;
+  return dc.cap;
+}
+
+// ══════════════════════════════════════
+// GRID — pure background skeleton
+// ══════════════════════════════════════
+let weekOff=0;
+const ROW_H=28; // px per 30-min row
+
+function renderGrid(){
+  const sch=getSch();
+  const days=weekDays(weekOff);
+  const today=fmtD(new Date());
+
+  buildLegend();
+
+  const d0=days[0],d6=days[6];
+  document.getElementById('wlbl').textContent=`Week ${weekNum(d0)} · ${d0.getDate()} ${MN[d0.getMonth()]} – ${d6.getDate()} ${MN[d6.getMonth()]} ${d6.getFullYear()}`;
+
+  let gS=24*60,gE=0;
+  days.forEach(d=>{const dc=sch.days[d.getDay()];if(!dc||!dc.cap)return;const s=t2m(dc.start),e=t2m(dc.end);if(s<gS)gS=s;if(e>gE)gE=e;});
+  if(gE<=gS){gS=8*60;gE=17*60;}
+
+  const grid=sch.gridMin||30;
+  const bdur=sch.bookDur||90;
+  const rows=[];for(let m=gS;m<gE;m+=grid)rows.push(m);
+
+  const wg=document.getElementById('wgrid');
+  wg.innerHTML='';
+  wg.style.setProperty('--rh',ROW_H+'px');
+
+  // store layout info for block positioning
+  window._gridInfo={gS,gE,grid,bdur,days,rowCount:rows.length,rowH:ROW_H};
+
+  // header
+  const eh=document.createElement('div');eh.className='chdr';eh.style.background='#0d2309';wg.appendChild(eh);
+  days.forEach((d,i)=>{
+    const h=document.createElement('div');
+    h.className='chdr'+(fmtD(d)===today?' today':'');
+    h.innerHTML=`<span class="dn">${DN[i]}</span><span class="dd">${d.getDate()}</span>`;
+    wg.appendChild(h);
+  });
+
+  // rows
+  rows.forEach(rowMin=>{
+    const isMajor=days.some(d=>{
+      const dc=sch.days[d.getDay()];if(!dc||!dc.cap)return false;
+      const ds=t2m(dc.start);if(rowMin<ds)return false;
+      return(rowMin-ds)%bdur===0;
+    });
+    const tl=document.createElement('div');
+    tl.className='tlbl'+(isMajor?'':' dim');
+    tl.textContent=m2t(rowMin);
+    wg.appendChild(tl);
+
+    days.forEach(d=>{
+      const dateStr=fmtD(d);
+      const dow=d.getDay();
+      const dc=sch.days[dow];
+      const cell=document.createElement('div');
+
+      if(isBlocked(dateStr)){
+        cell.className='dcell off blkd one';
+        if(rowMin===gS)cell.innerHTML=`<div class="blkd-lbl">🚫 ${esc(blockReason(dateStr))}</div>`;
+        wg.appendChild(cell);return;
+      }
+      if(!dc||!dc.cap){cell.className='dcell off one';wg.appendChild(cell);return;}
+      const dayStart=t2m(dc.start),dayEnd=t2m(dc.end);
+      if(rowMin<dayStart||rowMin>=dayEnd){cell.className='dcell off one';wg.appendChild(cell);return;}
+
+      // What is the capacity of the booking block that covers this row?
+      // Find booking-start <= rowMin such that start+bdur > rowMin
+      let blockCap=0;
+      for(let s=rowMin;s>=dayStart;s-=grid){
+        const c=capAt(dow,s);
+        if(c>0&&s+bdur>rowMin){blockCap=c;break;}
+      }
+      if(blockCap===0){cell.className='dcell off one';wg.appendChild(cell);return;}
+
+      const isStart=capAt(dow,rowMin)>0&&(rowMin-dayStart)%grid===0;
+
+      cell.className='dcell'+(blockCap===1?' one':'');
+      // Add clickable lanes only on booking-start rows
+      for(let lane=1;lane<=blockCap;lane++){
+        const le=document.createElement('div');
+        if(isStart&&can('create')){
+          le.className='ln';
+          if(blockCap>1){const gl=document.createElement('div');gl.className='glbl';gl.textContent=`G${lane}`;le.appendChild(gl);}
+          const slotKey=dateStr+'_'+rowMin;
+          le.addEventListener('click',()=>handleLaneClick(slotKey,dateStr,rowMin,lane,blockCap));
+          le.addEventListener('dragover',e=>{e.preventDefault();le.classList.add('drop-ok')});
+          le.addEventListener('dragleave',()=>le.classList.remove('drop-ok'));
+          le.addEventListener('drop',e=>handleDrop(e,slotKey,lane));
+          le.dataset.slotKey=slotKey;le.dataset.lane=lane;
+        }else{
+          le.className='ln lnoclick';
+        }
+        cell.appendChild(le);
+      }
+      wg.appendChild(cell);
+    });
+  });
+
+  renderBlocks();
+}
+
+function buildLegend(){
+  const lb=document.getElementById('legend');lb.innerHTML='<span style="font-size:.73rem;font-weight:600;color:var(--muted)">Soort:</span>';
+  getTypes().filter(t=>t.on).forEach(t=>{const el=document.createElement('div');el.className='li';el.innerHTML=`<div class="ld" style="background:${t.color}"></div>${esc(t.label)}`;lb.appendChild(el);});
+}
+function changeWeek(d){weekOff+=d;renderGrid();}
+function goToday(){weekOff=0;renderGrid();}
+
+// ══════════════════════════════════════
+// BOOKING BLOCKS (absolute positioned)
+// ══════════════════════════════════════
+function renderBlocks(){
+  const gi=window._gridInfo;if(!gi)return;
+  const bks=getBK();
+  const wg=document.getElementById('wgrid');
+  const sch=getSch();
+
+  // Remove old blocks
+  document.querySelectorAll('.bblock').forEach(el=>el.remove());
+
+  // Header height: measure actual rendered header cell
+  const hdrCell=wg.querySelector('.chdr');
+  const hdrH=hdrCell?hdrCell.offsetHeight:28;
+
+  // Each data row = ROW_H px tall + 1px gap above it
+  // Row i (0-based) starts at: hdrH + 1 (gap after header) + i*(ROW_H+1)
+  // Row height visible = ROW_H (the gap is between rows, not inside)
+  // A booking spanning N rows: height = N*ROW_H + (N-1)*1  [N rows + N-1 internal gaps]
+
+  const GAP=1; // grid gap in px
+  const nRows=Math.ceil(sch.bookDur/gi.grid);
+
+  // Column positions: use actual offsetLeft/offsetWidth of header cells
+  const dayColEls=wg.querySelectorAll('.chdr:not(:first-child)');
+
+  gi.days.forEach((d,di)=>{
+    const dateStr=fmtD(d);
+    const dow=d.getDay();
+    const dc=sch.days[dow];
+    if(!dc||!dc.cap||isBlocked(dateStr))return;
+
+    const colEl=dayColEls[di];
+    if(!colEl)return;
+    const colLeft=colEl.offsetLeft;
+    const colWidth=colEl.offsetWidth;
+
+    Object.entries(bks).forEach(([key,arr])=>{
+      if(!key.startsWith(dateStr+'_'))return;
+      const slotMin=parseInt(key.split('_')[1]);
+      arr.forEach(bk=>{
+        const cap=capAt(dow,slotMin);
+        if(cap===0)return;
+
+        const typ=typeById(bk.type);
+        const lane=bk.grafmaker||1;
+        const endMin=slotMin+sch.bookDur;
+
+        // Which row index (0-based) does this slot start at?
+        const rowIdx=(slotMin-gi.gS)/gi.grid;
+
+        // Top = after header + gap + rowIdx*(rowH + gap)
+        const topPx=hdrH+GAP+rowIdx*(ROW_H+GAP);
+        // Height = nRows*rowH + (nRows-1)*gap  (spans rows and the gaps between them)
+        const heightPx=nRows*ROW_H+(nRows-1)*GAP;
+
+        // Lane positioning
+        const laneW=cap===1?colWidth-2:Math.floor((colWidth-2)/2);
+        const laneLeft=colLeft+1+(lane-1)*Math.floor(colWidth/cap);
+
+        // Solid light background
+        const r=parseInt(typ.color.slice(1,3),16);
+        const g2=parseInt(typ.color.slice(3,5),16);
+        const b2=parseInt(typ.color.slice(5,7),16);
+        const bgSolid=`rgb(${Math.min(255,r+75)},${Math.min(255,g2+75)},${Math.min(255,b2+75)})`;
+
+        const block=document.createElement('div');
+        block.className='bblock';
+        block.style.cssText=`top:${topPx}px;left:${laneLeft}px;width:${laneW}px;height:${heightPx}px;background:${bgSolid};border:2px solid ${typ.color};color:#1a1a18`;
+        block.innerHTML=`<div class="bct" style="color:${typ.color}">${esc(typ.label)}${cap>1?' · G'+lane:''}</div><div class="bcn">${esc(bk.naam)}</div><div class="bcs">${esc(bk.ond)}</div><div class="btm">${m2t(slotMin)}–${m2t(endMin)}</div>`;
+        block.dataset.key=key;block.dataset.id=bk.id;
+
+        if(can('edit')||can('view_detail'))block.addEventListener('click',e=>{e.stopPropagation();openEdit(key,bk.id);});
+        if(can('move')){
+          block.setAttribute('draggable','true');
+          block.addEventListener('dragstart',e=>startDrag(e,key,bk,block));
+          block.addEventListener('dragend',endDrag);
+        }
+        wg.appendChild(block);
+      });
+    });
+  });
+}
+
+function handleLaneClick(slotKey,dateStr,rowMin,lane,cap){
+  // Check if there's already a booking in this lane
+  const bks=getBK();
+  const existing=(bks[slotKey]||[]).find(b=>b.grafmaker==lane);
+  if(existing){openEdit(slotKey,existing.id);return;}
+  openNew(slotKey,dateStr,rowMin,lane,cap);
+}
+
+// ══════════════════════════════════════
+// DRAG & DROP
+// ══════════════════════════════════════
+let dragData=null;
+function startDrag(e,slotKey,bk,el){
+  dragData={fromKey:slotKey,bk};
+  e.dataTransfer.effectAllowed='move';
+  e.dataTransfer.setData('text/plain',bk.id);
+  const typ=typeById(bk.type);
+  const g=document.getElementById('dgh');
+  g.style.borderLeftColor=typ.color;g.style.background=lighten(typ.color,.2);
+  g.textContent=bk.naam;g.style.display='block';
+  if(el)el.classList.add('dragging');
+  const blank=new Image();blank.src='data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=';
+  e.dataTransfer.setDragImage(blank,0,0);
+}
+document.addEventListener('dragover',e=>{const g=document.getElementById('dgh');if(dragData&&g){g.style.left=e.clientX+'px';g.style.top=e.clientY+'px';}});
+function endDrag(){dragData=null;document.getElementById('dgh').style.display='none';document.querySelectorAll('.ln.drop-ok').forEach(el=>el.classList.remove('drop-ok'));}
+function handleDrop(e,toKey,toLane){
+  e.preventDefault();e.currentTarget.classList.remove('drop-ok');
+  if(!dragData)return;
+  const{fromKey,bk}=dragData;dragData=null;document.getElementById('dgh').style.display='none';
+  if(fromKey===toKey&&bk.grafmaker==toLane)return;
+  const bks=getBK();
+  if((bks[toKey]||[]).find(b=>b.grafmaker==toLane)){alert('Dit tijdslot is al bezet.');return;}
+  const[ds,sm]=toKey.split('_');
+  const cap=capAt(new Date(ds).getDay(),parseInt(sm));
+  if(toLane>cap){alert('Geen grafmaker beschikbaar hier.');return;}
+  if(bks[fromKey]){bks[fromKey]=bks[fromKey].filter(b=>b.id!==bk.id);if(!bks[fromKey].length)delete bks[fromKey];}
+  if(!bks[toKey])bks[toKey]=[];
+  bks[toKey].push({...bk,grafmaker:toLane});
+  saveBK(bks);addLog('move',`${bk.naam} verplaatst → ${toKey} G${toLane}`);renderGrid();
+}
+
+// ══════════════════════════════════════
+// BOOKING MODAL
+// ══════════════════════════════════════
+let selType='',selGM=null,editId=null,editKey=null,pmUserIdx=null;
+
+function slotLbl(ds,sm){
+  const[y,mo,da]=ds.split('-');const end=parseInt(sm)+getSch().bookDur;
+  return `${DN[new Date(ds).getDay()]} ${da}/${mo}/${y} · ${m2t(parseInt(sm))} – ${m2t(end)}`;
+}
+function buildTypeBtns(){
+  const c=document.getElementById('type-btns');c.innerHTML='';
+  getTypes().filter(t=>t.on).forEach(t=>{
+    const b=document.createElement('button');b.className='fgbtn';b.dataset.t=t.id;
+    b.innerHTML=`${t.icon} ${esc(t.label)}`;
+    b.onclick=()=>pickType(t.id,b,t.color);
+    c.appendChild(b);
+  });
+}
+function buildGMBtns(cap){
+  const c=document.getElementById('gm-btns');c.innerHTML='';
+  for(let i=1;i<=cap;i++){const b=document.createElement('button');b.className='fgbtn';b.dataset.gm=i;b.innerHTML=`👷 Grafmaker ${i}`;b.onclick=()=>pickGM(i,b);c.appendChild(b);}
+}
+function openNew(slotKey,ds,sm,lane,cap){
+  if(!can('create'))return;
+  editId=null;editKey=slotKey;selType='';selGM=null;
+  document.getElementById('m-title').textContent='Tijdslot boeken';
+  document.getElementById('btn-del').style.display='none';
+  document.getElementById('btn-save').style.display='';
+  document.getElementById('m-info').textContent=slotLbl(ds,sm);
+  clearMF();buildTypeBtns();
+  const gg=document.getElementById('gm-grp');
+  if(cap>1){gg.style.display='block';buildGMBtns(cap);pickGM(lane,document.querySelector(`.fgbtn[data-gm="${lane}"]`));}
+  else{gg.style.display='none';selGM=1;}
+  document.getElementById('mo').classList.add('open');
+}
+function openEdit(slotKey,id){
+  if(!can('edit')&&!can('view_detail'))return;
+  editId=id;editKey=slotKey;
+  const bk=(getBK()[slotKey]||[]).find(b=>b.id===id);if(!bk)return;
+  const[ds,sm]=slotKey.split('_');const cap=capAt(new Date(ds).getDay(),parseInt(sm));
+  document.getElementById('m-title').textContent=can('edit')?'Boeking bewerken':'Boeking bekijken';
+  document.getElementById('btn-del').style.display=can('del')?'block':'none';
+  document.getElementById('btn-save').style.display=can('edit')?'':'none';
+  document.getElementById('m-info').textContent=slotLbl(ds,sm);
+  clearMF();buildTypeBtns();
+  const gg=document.getElementById('gm-grp');
+  if(cap>1){gg.style.display='block';buildGMBtns(cap);pickGM(bk.grafmaker,document.querySelector(`.fgbtn[data-gm="${bk.grafmaker}"]`));}
+  else{gg.style.display='none';selGM=1;}
+  pickType(bk.type,document.querySelector(`.fgbtn[data-t="${bk.type}"]`),typeById(bk.type).color);
+  document.getElementById('f-naam').value=bk.naam||'';
+  document.getElementById('f-ond').value=bk.ond||'';
+  document.getElementById('f-bij').checked=!!bk.bijzetting;
+  document.getElementById('f-dnt').checked=!!bk.dienst;
+  document.getElementById('f-opm').value=bk.opmerking||'';
+  const ro=!can('edit');
+  ['f-naam','f-ond','f-opm'].forEach(x=>{document.getElementById(x).disabled=ro;});
+  document.getElementById('f-bij').disabled=ro;document.getElementById('f-dnt').disabled=ro;
+  document.getElementById('mo').classList.add('open');
+}
+function clearMF(){
+  selType='';selGM=null;
+  document.querySelectorAll('#type-btns .fgbtn,#gm-btns .fgbtn').forEach(b=>{b.classList.remove('sel');b.style.background='';b.style.borderColor='';});
+  ['f-naam','f-ond','f-opm'].forEach(id=>{const el=document.getElementById(id);if(el){el.value='';el.disabled=false;}});
+  document.getElementById('f-bij').checked=false;document.getElementById('f-bij').disabled=false;
+  document.getElementById('f-dnt').checked=false;document.getElementById('f-dnt').disabled=false;
+  document.querySelectorAll('.ferr').forEach(e=>e.style.display='none');
+}
+function closeModal(){document.getElementById('mo').classList.remove('open');editId=null;editKey=null;}
+function pickType(t,btn,color){
+  selType=t;
+  document.querySelectorAll('#type-btns .fgbtn').forEach(b=>{b.classList.remove('sel');b.style.background='';b.style.borderColor='';});
+  if(btn&&color){btn.classList.add('sel');btn.style.background=lighten(color);btn.style.borderColor=color;}
+  document.getElementById('err-type').style.display='none';
+}
+function pickGM(gm,btn){
+  selGM=parseInt(gm);
+  document.querySelectorAll('#gm-btns .fgbtn').forEach(b=>{b.classList.remove('sel');b.style.background='';b.style.borderColor='';});
+  if(btn){btn.classList.add('sel');btn.style.background=lighten('#2d5a27');btn.style.borderColor='#2d5a27';}
+  document.getElementById('err-gm').style.display='none';
+}
+function saveBooking(){
+  let ok=true;
+  if(document.getElementById('gm-grp').style.display!=='none'&&!selGM){document.getElementById('err-gm').style.display='block';ok=false;}
+  if(!selType){document.getElementById('err-type').style.display='block';ok=false;}
+  const naam=document.getElementById('f-naam').value.trim();if(!naam){document.getElementById('err-naam').style.display='block';ok=false;}
+  const ond=document.getElementById('f-ond').value.trim();if(!ond){document.getElementById('err-ond').style.display='block';ok=false;}
+  if(!ok)return;
+  const bk={id:editId||('bk_'+Date.now()+'_'+Math.random().toString(36).slice(2,6)),grafmaker:selGM||1,type:selType,naam,ond,bijzetting:document.getElementById('f-bij').checked,dienst:document.getElementById('f-dnt').checked,opmerking:document.getElementById('f-opm').value.trim(),ts:new Date().toISOString()};
+  const bks=getBK();if(!bks[editKey])bks[editKey]=[];
+  if(editId){const i=bks[editKey].findIndex(b=>b.id===editId);if(i>=0)bks[editKey][i]=bk;else bks[editKey].push(bk);addLog('edit',`Bewerkt: ${bk.naam} · ${editKey}`);}
+  else{if(bks[editKey].find(b=>b.grafmaker===bk.grafmaker)){alert(`Grafmaker ${bk.grafmaker} al geboekt.`);return;}bks[editKey].push(bk);addLog('create',`Nieuw: ${bk.naam} · ${typeById(bk.type).label} · G${bk.grafmaker} · ${editKey}`);}
+  saveBK(bks);closeModal();renderGrid();
+}
+function deleteBooking(){
+  if(!confirm('Boeking verwijderen?'))return;
+  const bks=getBK();const bk=(bks[editKey]||[]).find(b=>b.id===editId);
+  if(bks[editKey]){bks[editKey]=bks[editKey].filter(b=>b.id!==editId);if(!bks[editKey].length)delete bks[editKey];}
+  saveBK(bks);addLog('delete',`Verwijderd: ${bk?.naam} · ${editKey}`);closeModal();renderGrid();
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closePM();}});
+document.getElementById('mo').addEventListener('click',function(e){if(e.target===this)closeModal()});
+document.getElementById('mo-p').addEventListener('click',function(e){if(e.target===this)closePM()});
+
+// ══════════════════════════════════════
+// EMOJI PICKER
+// ══════════════════════════════════════
+const EMOJIS=['🌿','⚱','🏛','🔑','🏺','⛏','🕊','🌸','☀','🌙','⭐','🌺','🌻','🌼','🌷','🍀','🌾','🍃','🦋','🕯','✝','🪦','☪','✡','🙏','💐','🌹','🏅','📿','🎗','💎','🌊','🔔','🪷','🪹','🫶','❤','🩺','🧬','📋','📌','🗺','🏠','🌲','🎋','🪴'];
+function openEmojiPicker(ctx){
+  const picker=document.getElementById('emoji-picker-'+ctx);
+  if(!picker)return;
+  if(picker.children.length===0){
+    EMOJIS.forEach(em=>{
+      const b=document.createElement('button');b.className='epick';b.textContent=em;b.type='button';
+      b.addEventListener('mousedown',e=>{
+        e.preventDefault();e.stopPropagation();
+        document.getElementById('nt-ico').value=em;
+        picker.classList.remove('open');
+      });
+      picker.appendChild(b);
+    });
+  }
+  picker.classList.toggle('open');
+}
+document.addEventListener('mousedown',e=>{
+  if(!e.target.closest('.emoji-picker')&&e.target.id!=='nt-ico')
+    document.querySelectorAll('.emoji-picker').forEach(p=>p.classList.remove('open'));
+});
+
+// ══════════════════════════════════════
+// SCHEDULE EDITOR
+// ══════════════════════════════════════
+function renderDayEd(){
+  const sch=getSch();
+  document.getElementById('adm-grid').value=sch.gridMin||30;
+  document.getElementById('adm-bdur').value=sch.bookDur||90;
+  updateBdurHint();
+  const c=document.getElementById('day-ed');c.innerHTML='';
+  [1,2,3,4,5,6,0].forEach(dow=>{
+    const dc=sch.days[dow]||{start:'09:00',end:'15:00',cap:0};
+    const row=document.createElement('div');row.className='arow';
+    row.innerHTML=`
+      <label style="min-width:90px;font-weight:600">${DN[dow]}</label>
+      <select class="ain" id="dc-${dow}-c" onchange="toggleDC(${dow})">
+        <option value="0"${!dc.cap?' selected':''}>Gesloten</option>
+        <option value="1"${dc.cap===1?' selected':''}>1 grafmaker</option>
+        <option value="2"${dc.cap===2?' selected':''}>2 grafmakers</option>
+      </select>
+      <span id="dc-${dow}-ex" style="${!dc.cap?'opacity:.38;pointer-events:none':''}">
+        <input type="time" id="dc-${dow}-s" value="${dc.start||'09:00'}" class="ain">
+        <span style="font-size:.78rem;color:var(--muted)">tot</span>
+        <input type="time" id="dc-${dow}-e" value="${dc.end||'15:00'}" class="ain">
+        ${dow===5?`<label style="margin-left:.4rem">Split:</label>
+          <input type="time" id="dc-5-sp" value="${dc.splitAt||'12:00'}" class="ain">
+          <span style="font-size:.76rem;color:var(--muted)">→</span>
+          <select id="dc-5-sc" class="ain">
+            <option value="1"${(dc.splitCap||1)===1?' selected':''}>1</option>
+            <option value="2"${(dc.splitCap||1)===2?' selected':''}>2</option>
+          </select>`:''}
+      </span>`;
+    c.appendChild(row);
+  });
+}
+function toggleDC(dow){const cap=parseInt(document.getElementById(`dc-${dow}-c`).value);const ex=document.getElementById(`dc-${dow}-ex`);if(ex){ex.style.opacity=cap?'1':'.38';ex.style.pointerEvents=cap?'auto':'none';}}
+function updateBdurHint(){const v=parseInt(document.getElementById('adm-bdur').value)||90;document.getElementById('bdur-hint').textContent=`(boekingen duren ${v} min)`;}
+document.addEventListener('input',e=>{if(e.target.id==='adm-bdur')updateBdurHint();});
+function saveSchedule(){
+  const sch=getSch();
+  sch.gridMin=parseInt(document.getElementById('adm-grid').value)||30;
+  sch.bookDur=parseInt(document.getElementById('adm-bdur').value)||90;
+  [1,2,3,4,5,6,0].forEach(dow=>{
+    const cap=parseInt(document.getElementById(`dc-${dow}-c`)?.value||0);
+    const s=document.getElementById(`dc-${dow}-s`)?.value||'09:00';
+    const e=document.getElementById(`dc-${dow}-e`)?.value||'15:00';
+    sch.days[dow]={start:s,end:e,cap};
+    if(dow===5){const sp=document.getElementById('dc-5-sp')?.value;const sc=document.getElementById('dc-5-sc')?.value;if(sp)sch.days[5].splitAt=sp;if(sc)sch.days[5].splitCap=parseInt(sc);}
+  });
+  saveSch(sch);addLog('system','Werkrooster aangepast');alert('Opgeslagen!');renderGrid();
+}
+
+// ══════════════════════════════════════
+// BLOCKED DAYS
+// ══════════════════════════════════════
+function renderBlkList(){
+  const bl=getBlk();const tb=document.getElementById('blk-tbody');tb.innerHTML='';
+  if(!bl.length){tb.innerHTML='<tr><td colspan="4" style="color:var(--muted);font-size:.78rem;padding:.45rem">Geen geblokkeerde periodes.</td></tr>';return;}
+  bl.forEach((b,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${b.from}</td><td>${b.to}</td><td>${esc(b.reason||'—')}</td><td><button class="xbtn" onclick="removeBlk(${i})">✕</button></td>`;tb.appendChild(tr);});
+}
+function addBlock(){
+  const f=document.getElementById('blk-f').value,t=document.getElementById('blk-t').value,r=document.getElementById('blk-r').value.trim();
+  if(!f||!t){alert('Kies start- en einddatum.');return;}if(f>t){alert('Einddatum na startdatum.');return;}
+  const bl=getBlk();bl.push({from:f,to:t,reason:r});saveBlk(bl);addLog('system',`Geblokkeerd: ${f}–${t}`);renderBlkList();renderGrid();
+}
+function removeBlk(i){const bl=getBlk();bl.splice(i,1);saveBlk(bl);renderBlkList();renderGrid();}
+
+// ══════════════════════════════════════
+// TYPE MANAGER
+// ══════════════════════════════════════
+function renderTypeList(){
+  const types=getTypes();const c=document.getElementById('type-list');c.innerHTML='';
+  types.forEach((t,i)=>{
+    const row=document.createElement('div');row.className='titem';
+    row.innerHTML=`<input type="color" value="${t.color}" title="Kleur" onchange="updType(${i},'color',this.value)">
+      <input type="text" value="${esc(t.icon)}" oninput="updType(${i},'icon',this.value)" style="width:42px;text-align:center">
+      <input type="text" value="${esc(t.label)}" oninput="updType(${i},'label',this.value)" style="flex:1">
+      <label class="cki" title="Actief"><input type="checkbox" ${t.on?'checked':''} onchange="updType(${i},'on',this.checked)"><span style="font-size:.75rem;color:var(--muted)">Actief</span></label>
+      <button class="xbtn" onclick="delType(${i})" title="Verwijderen">✕</button>`;
+    c.appendChild(row);
+  });
+}
+function updType(i,k,v){const t=getTypes();t[i][k]=v;saveTypes(t);if(k==='on')renderGrid();}
+function delType(i){if(!confirm('Soort verwijderen?'))return;const t=getTypes();t.splice(i,1);saveTypes(t);renderTypeList();buildLegend();}
+function addType(){
+  const lbl=document.getElementById('nt-lbl').value.trim();
+  const ico=document.getElementById('nt-ico').value.trim()||'📦';
+  const col=document.getElementById('nt-col').value;
+  if(!lbl){alert('Geef een naam op.');return;}
+  const t=getTypes();t.push({id:'ct_'+Date.now(),label:lbl,icon:ico,color:col,on:true});
+  saveTypes(t);renderTypeList();buildLegend();
+  document.getElementById('nt-lbl').value='';document.getElementById('nt-ico').value='';
+}
+
+// ══════════════════════════════════════
+// USERS & PERMISSIONS
+// ══════════════════════════════════════
+const PDEF=[{sec:'Agenda'},{id:'view_agenda',lbl:'Agenda bekijken'},{id:'view_detail',lbl:'Boekingsdetails bekijken'},{sec:'Boekingen'},{id:'create',lbl:'Nieuwe boeking aanmaken'},{id:'edit',lbl:'Boeking bewerken'},{id:'del',lbl:'Boeking verwijderen'},{id:'move',lbl:'Boeking verplaatsen'},{sec:'Beheer'},{id:'admin',lbl:'Beheerpaneel openen'}];
+function renderUsers(){
+  const users=getUsers();const tb=document.getElementById('usr-tbody');tb.innerHTML='';
+  const rL={admin:'Beheerder',user:'Boeken',viewer:'Bekijken'};
+  users.forEach((u,i)=>{
+    const tr=document.createElement('tr');
+    const canDel=u.role!=='admin'||users.filter(x=>x.role==='admin').length>1;
+    tr.innerHTML=`<td><strong>${esc(u.name)}</strong></td><td><span class="badge badge-${u.role}">${rL[u.role]||u.role}</span></td>
+      <td>${u.customPerms?'<span style="font-size:.72rem;color:#856404">Aangepast</span>':'<span style="font-size:.72rem;color:var(--muted)">Rol standaard</span>'}
+      <button class="secbtn" style="padding:.16rem .46rem;font-size:.73rem;margin-left:.35rem" onclick="openPM(${i})">Rechten</button></td>
+      <td style="font-size:.71rem;color:var(--muted)">${(u.created||'').slice(0,10)}</td>
+      <td>${canDel?`<button class="xbtn" onclick="delUser(${i})">✕</button>`:''}</td>`;
+    tb.appendChild(tr);
+  });
+}
+function addUser(){
+  const n=document.getElementById('nu-n').value.trim(),p=document.getElementById('nu-p').value.trim(),r=document.getElementById('nu-r').value;
+  if(!n||!p){alert('Vul naam en wachtwoord in.');return;}
+  const users=getUsers();if(users.find(u=>u.pass===p)){alert('Wachtwoord al in gebruik.');return;}
+  users.push({id:'u_'+Date.now(),name:n,pass:p,role:r,created:new Date().toISOString()});
+  saveUsers(users);renderUsers();addLog('system',`Gebruiker aangemaakt: ${n}`);
+  buildLogUserFilter();
+  document.getElementById('nu-n').value='';document.getElementById('nu-p').value='';
+}
+function delUser(i){if(!confirm('Gebruiker verwijderen?'))return;const users=getUsers();addLog('system',`Gebruiker verwijderd: ${users[i].name}`);users.splice(i,1);saveUsers(users);renderUsers();}
+function openPM(i){
+  pmUserIdx=i;const u=getUsers()[i];const perms=getPerms();const rp=perms[u.role]||{};const cp=u.customPerms||null;
+  document.getElementById('pm-title').textContent=`Rechten: ${u.name}`;
+  const body=document.getElementById('pm-body');
+  body.innerHTML=`<p style="font-size:.78rem;color:var(--muted);margin-bottom:.65rem">Standaard = rechten van de rol (${u.role}).</p>
+    <label class="cki" style="margin-bottom:.7rem;display:flex;gap:.35rem"><input type="checkbox" id="use-cp" ${cp?'checked':''} onchange="toggleCP(this.checked)"><span>Aangepaste rechten voor deze gebruiker</span></label>
+    <div id="cp-rows" style="${cp?'':'opacity:.38;pointer-events:none'}">`;
+  const eff=cp||rp;
+  PDEF.forEach(p=>{
+    if(p.sec){body.innerHTML+=`<div style="font-weight:700;color:var(--hbg);font-size:.72rem;margin:.42rem 0 .2rem;border-top:1px solid var(--border);padding-top:.32rem">${p.sec}</div>`;return;}
+    body.innerHTML+=`<label class="cki" style="margin-bottom:.28rem;display:flex;gap:.35rem"><input type="checkbox" data-pid="${p.id}" ${eff[p.id]?'checked':''}><span style="font-size:.81rem">${p.lbl}</span></label>`;
+  });
+  body.innerHTML+='</div>';
+  document.getElementById('mo-p').classList.add('open');
+}
+function toggleCP(v){const r=document.getElementById('cp-rows');r.style.opacity=v?'1':'.38';r.style.pointerEvents=v?'auto':'none';}
+function closePM(){document.getElementById('mo-p').classList.remove('open');}
+function saveUserPerms(){
+  const users=getUsers();const u=users[pmUserIdx];
+  if(document.getElementById('use-cp').checked){const cp={};document.querySelectorAll('#cp-rows input[data-pid]').forEach(el=>{cp[el.dataset.pid]=el.checked;});u.customPerms=cp;}
+  else delete u.customPerms;
+  saveUsers(users);addLog('system',`Rechten aangepast voor ${u.name}`);closePM();renderUsers();
+}
+function renderPermTable(){
+  const perms=getPerms();const tb=document.getElementById('pm-tbody');tb.innerHTML='';
+  PDEF.forEach(p=>{
+    if(p.sec){const tr=document.createElement('tr');tr.innerHTML=`<td class="pmtbl psec" colspan="4">${p.sec}</td>`;tb.appendChild(tr);return;}
+    const tr=document.createElement('tr');let cells=`<td>${p.lbl}</td>`;
+    ['viewer','user','admin'].forEach(r=>{cells+=`<td><input type="checkbox" data-r="${r}" data-p="${p.id}" ${(perms[r]&&perms[r][p.id])?'checked':''} ${r==='admin'?'disabled':''}></td>`;});
+    tr.innerHTML=cells;tb.appendChild(tr);
+  });
+}
+function saveRolePerms(){
+  const perms=getPerms();
+  document.querySelectorAll('#pm-tbody input[data-r]').forEach(el=>{if(!perms[el.dataset.r])perms[el.dataset.r]={};perms[el.dataset.r][el.dataset.p]=el.checked;});
+  PDEF.filter(p=>p.id).forEach(p=>{perms.admin[p.id]=true;});
+  savePerms(perms);addLog('system','Rolrechten aangepast');alert('Rechten opgeslagen!');
+}
+
+// ══════════════════════════════════════
+// STATISTICS
+// ══════════════════════════════════════
+function allBKList(){const bks=getBK();const all=[];Object.entries(bks).forEach(([k,arr])=>{const[ds,sm]=k.split('_');arr.forEach(b=>all.push({...b,dateStr:ds,slotMin:parseInt(sm)}));});return all;}
+function onPChange(){const v=document.getElementById('sp').value;document.getElementById('sp-custom').style.display=v==='custom'?'flex':'none';}
+function getPRange(){
+  const v=document.getElementById('sp').value,now=new Date(),y=now.getFullYear(),mo=now.getMonth();
+  if(v==='week'){const mon=new Date(now);mon.setDate(now.getDate()-(now.getDay()===0?6:now.getDay()-1));const sun=new Date(mon);sun.setDate(mon.getDate()+6);return[fmtD(mon),fmtD(sun)];}
+  if(v==='month')return[`${y}-${pz(mo+1)}-01`,`${y}-${pz(mo+1)}-${pz(new Date(y,mo+1,0).getDate())}`];
+  if(v==='year')return[`${y}-01-01`,`${y}-12-31`];
+  if(v==='5year')return[`${y-4}-01-01`,`${y}-12-31`];
+  if(v==='custom')return[document.getElementById('sp-f').value||'2000-01-01',document.getElementById('sp-t').value||'2099-12-31'];
+  return['2000-01-01','2099-12-31'];
+}
+function renderStats(){
+  const[from,to]=getPRange();const all=allBKList().filter(b=>b.dateStr>=from&&b.dateStr<=to);
+  document.getElementById('stat-cards').innerHTML=`<div class="scard"><div class="sn">${all.length}</div><div class="sl">Totaal boekingen</div></div><div class="scard"><div class="sn">${new Set(all.map(b=>b.dateStr)).size}</div><div class="sl">Dagen met boekingen</div></div><div class="scard"><div class="sn">${new Set(all.map(b=>b.ond)).size}</div><div class="sl">Unieke ondernemers</div></div><div class="scard"><div class="sn">${all.filter(b=>b.bijzetting).length}</div><div class="sl">Bijzettingen</div></div><div class="scard"><div class="sn">${all.filter(b=>b.dienst).length}</div><div class="sl">Diensten</div></div>`;
+  const types=getTypes();const byT={};types.forEach(t=>{byT[t.id]=0;});all.forEach(b=>{byT[b.type]=(byT[b.type]||0)+1;});
+  bar('ch-type',byT,k=>typeById(k).label,Object.fromEntries(types.map(t=>[t.id,t.color])));
+  const byD={0:0,1:0,2:0,3:0,4:0,5:0,6:0};all.forEach(b=>{byD[new Date(b.dateStr).getDay()]++;});
+  bar('ch-day',byD,k=>DN[k],null);
+  const byGM={};all.forEach(b=>{byGM['G'+b.grafmaker]=(byGM['G'+b.grafmaker]||0)+1;});
+  bar('ch-gm',byGM,k=>k,null);
+  const byO={};all.forEach(b=>{byO[b.ond]=(byO[b.ond]||0)+1;});
+  bar('ch-ond',Object.fromEntries(Object.entries(byO).sort((a,b)=>b[1]-a[1]).slice(0,8)),k=>k,null);
+}
+function bar(id,data,lblFn,colors){
+  const c=document.getElementById(id);if(!c)return;c.innerHTML='';
+  const entries=Object.entries(data).sort((a,b)=>b[1]-a[1]);
+  if(!entries.length){c.innerHTML='<div style="color:var(--muted);font-size:.78rem">Geen data.</div>';return;}
+  const max=Math.max(...entries.map(e=>e[1]),1);
+  entries.forEach(([k,v])=>{const col=(colors&&colors[k])||'#3a7abf';const row=document.createElement('div');row.className='brow';row.innerHTML=`<div class="blbl">${esc(lblFn(k))}</div><div class="btrk"><div class="bfil" style="width:${Math.round(v/max*100)}%;background:${col}"></div></div><div class="bval">${v}</div>`;c.appendChild(row);});
+}
+
+// ══════════════════════════════════════
+// PDF / PRINT
+// ══════════════════════════════════════
+function initPdf(){
+  const now=new Date();const mon=new Date(now);mon.setDate(now.getDate()-(now.getDay()===0?6:now.getDay()-1));
+  const sun=new Date(mon);sun.setDate(mon.getDate()+6);
+  document.getElementById('pdf-f').value=fmtD(mon);document.getElementById('pdf-t').value=fmtD(sun);
+}
+function genPdf(){
+  const from=document.getElementById('pdf-f').value,to=document.getElementById('pdf-t').value;
+  if(!from||!to){alert('Kies een periode.');return;}
+  const bks=getBK();const sch=getSch();
+  const dates=[];const cur=new Date(from);const end=new Date(to);
+  while(cur<=end){dates.push(fmtD(cur));cur.setDate(cur.getDate()+1);}
+  let html=`<h2 style="font-family:Georgia,serif;margin-bottom:.65rem;font-size:1.02rem">Agenda ${from} tot ${to}</h2>`;
+  html+=`<table class="ptbl"><thead><tr><th>Datum</th><th>Tijdstip</th><th>Grafmaker</th><th>Soort</th><th>Overledene</th><th>Ondernemer</th><th>Extra</th></tr></thead><tbody>`;
+  let count=0;
+  dates.forEach(ds=>{
+    const d=new Date(ds);const lbl=`${DN[d.getDay()]} ${ds.split('-').reverse().join('/')}`;
+    if(isBlocked(ds)){html+=`<tr><td colspan="7" style="background:#f0ede8;color:#888;font-style:italic">${lbl} — ${esc(blockReason(ds))}</td></tr>`;return;}
+    const dBks=Object.entries(bks).filter(([k])=>k.startsWith(ds+'_')).flatMap(([k,arr])=>arr.map(b=>({...b,slotMin:parseInt(k.split('_')[1])}))).sort((a,b)=>a.slotMin-b.slotMin||a.grafmaker-b.grafmaker);
+    if(!dBks.length)return;
+    dBks.forEach((b,i)=>{
+      const typ=typeById(b.type);const ex=[b.bijzetting?'Bijzetting':'',b.dienst?'Dienst ervoor':'',b.opmerking||''].filter(Boolean).join(', ');
+      html+=`<tr style="border-left:3px solid ${typ.color}"><td>${i===0?lbl:''}</td><td>${m2t(b.slotMin)}–${m2t(b.slotMin+sch.bookDur)}</td><td>G${b.grafmaker}</td><td>${esc(typ.label)}</td><td><strong>${esc(b.naam)}</strong></td><td>${esc(b.ond)}</td><td style="font-size:.7rem">${esc(ex)}</td></tr>`;count++;
+    });
+  });
+  if(!count)html+=`<tr><td colspan="7" style="color:var(--muted);padding:.65rem">Geen boekingen.</td></tr>`;
+  html+='</tbody></table>';document.getElementById('pdf-area').innerHTML=html;
+}
+
+// resize: re-render blocks when window resizes (column widths may change)
+let resizeTimer;
+window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(renderBlocks,200);});
+</script>
+</body>
+</html>
